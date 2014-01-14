@@ -18,7 +18,7 @@
 #import <arpa/inet.h>	// for inet_ntoa()
 
 
-#define NetworkInformation_IFCONF_BUFFER_LENGTH	4000
+#define NetworkInformation_IFCONF_MAX_INTERFACE_COUNT   20
 const int NetworkInformationInterfaceTypeIPv4 = AF_INET;
 const int NetworkInformationInterfaceTypeMAC = AF_LINK;
 const NSString *NetworkInformationInterfaceAddressKey = @"address";
@@ -129,10 +129,10 @@ static NetworkInformation *__sharedNetworkInformationInstance;
 	// Use ioctl to gain information about the socket
 	// - Set ifconf buffer before executing ioctl
 	// - SIOCGIFCONF command retrieves ifnet list and put it into struct ifconf
-	char buffer[NetworkInformation_IFCONF_BUFFER_LENGTH];
 	struct ifconf ifc;
-	ifc.ifc_len = NetworkInformation_IFCONF_BUFFER_LENGTH;
-	ifc.ifc_buf = buffer;
+	struct ifreq ifreq[NetworkInformation_IFCONF_MAX_INTERFACE_COUNT];
+	ifc.ifc_len = sizeof ifreq;
+	ifc.ifc_buf = (char *)ifreq;
 	if (ioctl(sockfd, SIOCGIFCONF, &ifc) < 0) {
 		NSLog(@"NetworkInformation refresh failed: ioctl execution failed");
 		close(sockfd);
@@ -150,71 +150,73 @@ static NetworkInformation *__sharedNetworkInformationInstance;
 	for (char *p_index=ifc.ifc_buf; p_index < ifc.ifc_buf+ifc.ifc_len; ) {
 		p_ifr = (struct ifreq *)p_index;
 		
-		NSString *interfaceName = [NSString stringWithCString:p_ifr->ifr_name encoding:NSASCIIStringEncoding];
-		NSNumber *family = [NSNumber numberWithInt:p_ifr->ifr_addr.sa_family];
-		NSString *address = nil;
-		NSMutableDictionary *interfaceDict = nil;
-		NSMutableDictionary *interfaceTypeDetailDict = nil;
-		char temp[80];
-		
-		// Switch by sa_family
-		// - Do nothing if sa_family is not one of supported types (like MAC or IPv4)
-		switch (p_ifr->ifr_addr.sa_family) {
-			case AF_LINK:
-				// MAC address
-				
-				interfaceDict = [allInterfaces objectForKey:interfaceName];
-				if (!interfaceDict) {
-					interfaceDict = [NSMutableDictionary dictionary];
-					[allInterfaces setObject:interfaceDict forKey:interfaceName];
-				}
-				
-				interfaceTypeDetailDict = [interfaceDict objectForKey:family];
-				if (!interfaceTypeDetailDict) {
-					interfaceTypeDetailDict = [NSMutableDictionary dictionary];
-					[interfaceDict setObject:interfaceTypeDetailDict forKey:family];
-				}
-				
-				struct sockaddr_dl *sdl = (struct sockaddr_dl *) &(p_ifr->ifr_addr);
-				int a,b,c,d,e,f;
-				
-				strcpy(temp, ether_ntoa((const struct ether_addr *)LLADDR(sdl)));
-				sscanf(temp, "%x:%x:%x:%x:%x:%x", &a, &b, &c, &d, &e, &f);
-				sprintf(temp, "%02X:%02X:%02X:%02X:%02X:%02X",a,b,c,d,e,f);
-				
-				address = [NSString stringWithCString:temp encoding:NSASCIIStringEncoding];
-				[interfaceTypeDetailDict setObject:address forKey:NetworkInformationInterfaceAddressKey];
-				
-				break;
-				
-			case AF_INET:
-				// IPv4 address
-				
-				interfaceDict = [allInterfaces objectForKey:interfaceName];
-				if (!interfaceDict) {
-					interfaceDict = [NSMutableDictionary dictionary];
-					[allInterfaces setObject:interfaceDict forKey:interfaceName];
-				}
-				
-				interfaceTypeDetailDict = [interfaceDict objectForKey:family];
-				if (!interfaceTypeDetailDict) {
-					interfaceTypeDetailDict = [NSMutableDictionary dictionary];
-					[interfaceDict setObject:interfaceTypeDetailDict forKey:family];
-				}
-				
-				struct sockaddr_in *sin = (struct sockaddr_in *) &p_ifr->ifr_addr;
-				
-				strcpy(temp, inet_ntoa(sin->sin_addr));
-				
-				address = [NSString stringWithCString:temp encoding:NSASCIIStringEncoding];
-				[interfaceTypeDetailDict setObject:address forKey:NetworkInformationInterfaceAddressKey];
-				
-				break;
-				
-			default:
-				// Anything else
-				break;
-				
+		if (p_ifr && p_ifr->ifr_addr.sa_family) {
+			NSString *interfaceName = [NSString stringWithCString:p_ifr->ifr_name encoding:NSASCIIStringEncoding];
+			NSNumber *family = [NSNumber numberWithInt:p_ifr->ifr_addr.sa_family];
+			NSString *address = nil;
+			NSMutableDictionary *interfaceDict = nil;
+			NSMutableDictionary *interfaceTypeDetailDict = nil;
+			char temp[80];
+			
+			// Switch by sa_family
+			// - Do nothing if sa_family is not one of supported types (like MAC or IPv4)
+			switch (p_ifr->ifr_addr.sa_family) {
+				case AF_LINK:
+					// MAC address
+					
+					interfaceDict = [allInterfaces objectForKey:interfaceName];
+					if (!interfaceDict) {
+						interfaceDict = [NSMutableDictionary dictionary];
+						[allInterfaces setObject:interfaceDict forKey:interfaceName];
+					}
+					
+					interfaceTypeDetailDict = [interfaceDict objectForKey:family];
+					if (!interfaceTypeDetailDict) {
+						interfaceTypeDetailDict = [NSMutableDictionary dictionary];
+						[interfaceDict setObject:interfaceTypeDetailDict forKey:family];
+					}
+					
+					struct sockaddr_dl *sdl = (struct sockaddr_dl *) &(p_ifr->ifr_addr);
+					int a,b,c,d,e,f;
+					
+					strcpy(temp, ether_ntoa((const struct ether_addr *)LLADDR(sdl)));
+					sscanf(temp, "%x:%x:%x:%x:%x:%x", &a, &b, &c, &d, &e, &f);
+					sprintf(temp, "%02X:%02X:%02X:%02X:%02X:%02X",a,b,c,d,e,f);
+					
+					address = [NSString stringWithCString:temp encoding:NSASCIIStringEncoding];
+					[interfaceTypeDetailDict setObject:address forKey:NetworkInformationInterfaceAddressKey];
+					
+					break;
+					
+				case AF_INET:
+					// IPv4 address
+					
+					interfaceDict = [allInterfaces objectForKey:interfaceName];
+					if (!interfaceDict) {
+						interfaceDict = [NSMutableDictionary dictionary];
+						[allInterfaces setObject:interfaceDict forKey:interfaceName];
+					}
+					
+					interfaceTypeDetailDict = [interfaceDict objectForKey:family];
+					if (!interfaceTypeDetailDict) {
+						interfaceTypeDetailDict = [NSMutableDictionary dictionary];
+						[interfaceDict setObject:interfaceTypeDetailDict forKey:family];
+					}
+					
+					struct sockaddr_in *sin = (struct sockaddr_in *) &p_ifr->ifr_addr;
+					
+					strcpy(temp, inet_ntoa(sin->sin_addr));
+					
+					address = [NSString stringWithCString:temp encoding:NSASCIIStringEncoding];
+					[interfaceTypeDetailDict setObject:address forKey:NetworkInformationInterfaceAddressKey];
+					
+					break;
+					
+				default:
+					// Anything else
+					break;
+					
+			}
 		}
 		
 		// Don't forget to calculate loop pointer!
