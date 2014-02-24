@@ -24,7 +24,6 @@ const int NetworkInformationInterfaceTypeMAC = AF_LINK;
 const NSString *NetworkInformationInterfaceAddressKey = @"address";
 
 
-static NetworkInformation *__sharedNetworkInformationInstance;
 @implementation NetworkInformation
 
 
@@ -101,10 +100,12 @@ static NetworkInformation *__sharedNetworkInformationInstance;
 }
 
 + (NetworkInformation *)sharedInformation {
-	if (!__sharedNetworkInformationInstance) {
-		__sharedNetworkInformationInstance = [[NetworkInformation alloc] init];
-	}
-	return __sharedNetworkInformationInstance;
+    static NetworkInformation *sharedInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedInstance = [[NetworkInformation alloc] init];
+    });
+    return sharedInstance;
 }
 
 
