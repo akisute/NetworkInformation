@@ -67,7 +67,7 @@ UIKIT_EXTERN const NSString *NetworkInformationInterfaceAddressKey;
 	 }
 	 
 	 */
-	NSMutableDictionary *allInterfaces;
+	NSDictionary *allInterfaces;
 }
 
 /*!

@@ -24,8 +24,15 @@ const int NetworkInformationInterfaceTypeMAC = AF_LINK;
 const NSString *NetworkInformationInterfaceAddressKey = @"address";
 
 
-@implementation NetworkInformation
+@interface NetworkInformation ()
 
+@property (nonatomic, retain) NSDictionary *allInterfaces;
+
+@end
+
+
+@implementation NetworkInformation
+@synthesize allInterfaces = allInterfaces;
 
 #pragma mark Properties
 
@@ -87,15 +94,8 @@ const NSString *NetworkInformationInterfaceAddressKey = @"address";
 #pragma mark Init/dealloc
 
 
-- (id)init {
-	if (self = [super init]) {
-		allInterfaces = nil;
-	}
-	return self;
-}
-
 - (void) dealloc {
-	[allInterfaces release];
+    self.allInterfaces = nil;
 	[super dealloc];
 }
 
@@ -113,12 +113,8 @@ const NSString *NetworkInformationInterfaceAddressKey = @"address";
 
 
 - (void)refresh {
-	
 	// Release Obj-C ivar data first
-	if (allInterfaces) {
-		[allInterfaces release];
-		allInterfaces = nil;
-	}
+    self.allInterfaces = nil;
 	
 	// Open socket
 	int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -140,10 +136,9 @@ const NSString *NetworkInformationInterfaceAddressKey = @"address";
 		return;
 	}
 	
-	// Prepare Obj-C ivar here
-	// - Should do this after all error check has been finished to prevent immature setup
-	allInterfaces = [[NSMutableDictionary alloc] init];
-	
+	// Prepare Obj-C dictionary here
+    NSMutableDictionary *interfaces = [NSMutableDictionary dictionary];
+    
 	// Loop through ifc to access struct ifreq
 	// - ifc.ifc_buf now contains multiple struct ifreq, but we don't have any clue of where are those pointers are
 	// - We have to calculate the next pointer location in order to loop...
@@ -165,10 +160,10 @@ const NSString *NetworkInformationInterfaceAddressKey = @"address";
 				case AF_LINK:
 					// MAC address
 					
-					interfaceDict = [allInterfaces objectForKey:interfaceName];
+					interfaceDict = [interfaces objectForKey:interfaceName];
 					if (!interfaceDict) {
 						interfaceDict = [NSMutableDictionary dictionary];
-						[allInterfaces setObject:interfaceDict forKey:interfaceName];
+						[interfaces setObject:interfaceDict forKey:interfaceName];
 					}
 					
 					interfaceTypeDetailDict = [interfaceDict objectForKey:family];
@@ -192,10 +187,10 @@ const NSString *NetworkInformationInterfaceAddressKey = @"address";
 				case AF_INET:
 					// IPv4 address
 					
-					interfaceDict = [allInterfaces objectForKey:interfaceName];
+					interfaceDict = [interfaces objectForKey:interfaceName];
 					if (!interfaceDict) {
 						interfaceDict = [NSMutableDictionary dictionary];
-						[allInterfaces setObject:interfaceDict forKey:interfaceName];
+						[interfaces setObject:interfaceDict forKey:interfaceName];
 					}
 					
 					interfaceTypeDetailDict = [interfaceDict objectForKey:family];
@@ -224,6 +219,8 @@ const NSString *NetworkInformationInterfaceAddressKey = @"address";
 		p_index += sizeof(p_ifr->ifr_name) + MAX(sizeof(p_ifr->ifr_addr), p_ifr->ifr_addr.sa_len);
 	}
 	
+	// Set Obj-C property here
+    self.allInterfaces = interfaces;
 	NSLog(@"allInterfaces = %@", allInterfaces);
 	
 	// Don't forget to close socket!
