@@ -96,6 +96,7 @@ UIKIT_EXTERN const NSString *NetworkInformationInterfaceAddressKey;
 
 
 + (NetworkInformation *)sharedInformation;
++ (void)unshare;
 
 
 - (void)refresh;

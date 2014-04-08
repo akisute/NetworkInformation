@@ -99,15 +99,22 @@ const NSString *NetworkInformationInterfaceAddressKey = @"address";
 	[super dealloc];
 }
 
-+ (NetworkInformation *)sharedInformation {
-    static NetworkInformation *sharedInstance = nil;
-    static dispatch_once_t onceToken;
+#pragma mark Shared
+
+static NetworkInformation *sharedInstance;
+static dispatch_once_t onceToken;
++ (instancetype)sharedInformation {
     dispatch_once(&onceToken, ^{
-        sharedInstance = [[NetworkInformation alloc] init];
+        sharedInstance = [self new];
     });
     return sharedInstance;
 }
 
++ (void)unshare {
+    onceToken = 0;
+    [sharedInstance release];
+    sharedInstance = nil;
+}
 
 #pragma mark Other methods
 
