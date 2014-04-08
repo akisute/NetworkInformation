@@ -147,7 +147,7 @@ static dispatch_once_t onceToken;
     NSMutableDictionary *interfaces = [NSMutableDictionary dictionary];
     
 	// Loop through ifc to access struct ifreq
-	// - ifc.ifc_buf now contains multiple struct ifreq, but we don't have any clue of where are those pointers are
+	// - ifc.ifc_buf now contains multiple struct ifreq, but we don't have any clue of where those pointers are
 	// - We have to calculate the next pointer location in order to loop...
 	struct ifreq *p_ifr;
 	for (char *p_index=ifc.ifc_buf; p_index < ifc.ifc_buf+ifc.ifc_len; ) {
@@ -182,9 +182,9 @@ static dispatch_once_t onceToken;
 					struct sockaddr_dl *sdl = (struct sockaddr_dl *) &(p_ifr->ifr_addr);
 					int a,b,c,d,e,f;
 					
-					strcpy(temp, ether_ntoa((const struct ether_addr *)LLADDR(sdl)));
+					strlcpy(temp, ether_ntoa((const struct ether_addr *)LLADDR(sdl)), sizeof(temp));
 					sscanf(temp, "%x:%x:%x:%x:%x:%x", &a, &b, &c, &d, &e, &f);
-					sprintf(temp, "%02X:%02X:%02X:%02X:%02X:%02X",a,b,c,d,e,f);
+					sprintf(temp, "%02X:%02X:%02X:%02X:%02X:%02X", a, b, c, d, e, f);
 					
 					address = [NSString stringWithCString:temp encoding:NSASCIIStringEncoding];
 					[interfaceTypeDetailDict setObject:address forKey:NetworkInformationInterfaceAddressKey];
@@ -208,7 +208,7 @@ static dispatch_once_t onceToken;
 					
 					struct sockaddr_in *sin = (struct sockaddr_in *) &p_ifr->ifr_addr;
 					
-					strcpy(temp, inet_ntoa(sin->sin_addr));
+					strlcpy(temp, inet_ntoa(sin->sin_addr), sizeof(temp));
 					
 					address = [NSString stringWithCString:temp encoding:NSASCIIStringEncoding];
 					[interfaceTypeDetailDict setObject:address forKey:NetworkInformationInterfaceAddressKey];
@@ -218,7 +218,6 @@ static dispatch_once_t onceToken;
 				default:
 					// Anything else
 					break;
-					
 			}
 		}
 		
@@ -228,7 +227,7 @@ static dispatch_once_t onceToken;
 	
 	// Set Obj-C property here
     self.allInterfaces = interfaces;
-	NSLog(@"allInterfaces = %@", allInterfaces);
+	NSLog(@"allInterfaces = %@", interfaces);
 	
 	// Don't forget to close socket!
 	close(sockfd);
