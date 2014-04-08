@@ -23,47 +23,47 @@ UIKIT_EXTERN const NSString *NetworkInformationInterfaceAddressKey;
 	 This dictionary should be like this:
 	 
 	 allInterfaces = {
-	 en0 =     {
-	 18 =         {
-	 address = "AA:AA:AA:AA:AA:AA";
-	 };
-	 };
-	 en1 =     {
-	 18 =         {
-	 address = "BB:BB:BB:BB:BB:BB";
-	 };
-	 2 =         {
-	 address = "192.168.100.20";
-	 };
-	 };
-	 fw0 =     {
-	 18 =         {
-	 address = "CC:CC:CC:CC:CC:CC";
-	 };
-	 };
-	 gif0 =     {
-	 18 =         {
-	 address = "00:00:00:00:00:00";
-	 };
-	 };
-	 lo0 =     {
-	 18 =         {
-	 address = "00:00:00:00:00:00";
-	 };
-	 2 =         {
-	 address = "127.0.0.1";
-	 };
-	 };
-	 stf0 =     {
-	 18 =         {
-	 address = "00:00:00:00:00:00";
-	 };
-	 };
-	 vboxnet0 =     {
-	 18 =         {
-	 address = "DD:DD:DD:DD:DD:DD";
-	 };
-	 };
+        en0 = {
+            18 = {
+                address = "AA:AA:AA:AA:AA:AA";
+            };
+        };
+        en1 = {
+            18 = {
+                address = "BB:BB:BB:BB:BB:BB";
+            };
+            2 = {
+                address = "192.168.100.20";
+            };
+        };
+        fw0 = {
+            18 = {
+                address = "CC:CC:CC:CC:CC:CC";
+            };
+        };
+        gif0 = {
+            18 = {
+                address = "00:00:00:00:00:00";
+            };
+        };
+        lo0 = {
+            18 = {
+                address = "00:00:00:00:00:00";
+            };
+            2 = {
+                address = "127.0.0.1";
+            };
+        };
+        stf0 = {
+            18 = {
+                address = "00:00:00:00:00:00";
+            };
+        };
+        vboxnet0 = {
+            18 = {
+                address = "DD:DD:DD:DD:DD:DD";
+            };
+        };
 	 }
 	 
 	 */
