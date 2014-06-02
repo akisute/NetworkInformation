@@ -24,8 +24,15 @@ const int NetworkInformationInterfaceTypeMAC = AF_LINK;
 const NSString *NetworkInformationInterfaceAddressKey = @"address";
 
 
-@implementation NetworkInformation
+@interface NetworkInformation ()
 
+@property (nonatomic, retain) NSDictionary *allInterfaces;
+
+@end
+
+
+@implementation NetworkInformation
+@synthesize allInterfaces = allInterfaces;
 
 #pragma mark Properties
 
@@ -49,20 +56,21 @@ const NSString *NetworkInformationInterfaceAddressKey = @"address";
 	// - If primary Ethernet has IPv4 address, return it
 	//   Else, return secondary Ethernet IPv4 address
 	// - Return nil if no Ethernet/Cellphone network have address
-	if ([self IPv4AddressForInterfaceName:@"en0"]) {
-		return [self IPv4AddressForInterfaceName:@"en0"];
-	} else if ([self IPv4AddressForInterfaceName:@"en1"]) {
-		return [self IPv4AddressForInterfaceName:@"en1"];
-	} else if ([self IPv4AddressForInterfaceName:@"en2"]) {
-		return [self IPv4AddressForInterfaceName:@"en2"];
-	} else if ([self IPv4AddressForInterfaceName:@"pdp_ip0"]) {
-		return [self IPv4AddressForInterfaceName:@"pdp_ip0"];
-	} else if ([self IPv4AddressForInterfaceName:@"pdp_ip1"]) {
-		return [self IPv4AddressForInterfaceName:@"pdp_ip1"];
-	} else if ([self IPv4AddressForInterfaceName:@"pdp_ip2"]) {
-		return [self IPv4AddressForInterfaceName:@"pdp_ip2"];
-	} else if ([self IPv4AddressForInterfaceName:@"pdp_ip3"]) {
-		return [self IPv4AddressForInterfaceName:@"pdp_ip3"];
+    NSString *result;
+	if ((result = [self IPv4AddressForInterfaceName:@"en0"])) {
+		return result;
+	} else if ((result = [self IPv4AddressForInterfaceName:@"en1"])) {
+		return result;
+	} else if ((result = [self IPv4AddressForInterfaceName:@"en2"])) {
+		return result;
+	} else if ((result = [self IPv4AddressForInterfaceName:@"pdp_ip0"])) {
+		return result;
+	} else if ((result = [self IPv4AddressForInterfaceName:@"pdp_ip1"])) {
+		return result;
+	} else if ((result = [self IPv4AddressForInterfaceName:@"pdp_ip2"])) {
+		return result;
+	} else if ((result = [self IPv4AddressForInterfaceName:@"pdp_ip3"])) {
+		return result;
 	} else {
 		return nil;
 	}
@@ -87,38 +95,34 @@ const NSString *NetworkInformationInterfaceAddressKey = @"address";
 #pragma mark Init/dealloc
 
 
-- (id)init {
-	if (self = [super init]) {
-		allInterfaces = nil;
-	}
-	return self;
-}
-
-- (void) dealloc {
-	[allInterfaces release];
+- (void)dealloc {
+    self.allInterfaces = nil;
 	[super dealloc];
 }
 
-+ (NetworkInformation *)sharedInformation {
-    static NetworkInformation *sharedInstance = nil;
-    static dispatch_once_t onceToken;
+#pragma mark Shared
+
+static NetworkInformation *sharedInstance;
+static dispatch_once_t onceToken;
++ (instancetype)sharedInformation {
     dispatch_once(&onceToken, ^{
-        sharedInstance = [[NetworkInformation alloc] init];
+        sharedInstance = [self new];
     });
     return sharedInstance;
 }
 
++ (void)unshare {
+    onceToken = 0;
+    [sharedInstance release];
+    sharedInstance = nil;
+}
 
 #pragma mark Other methods
 
 
 - (void)refresh {
-	
 	// Release Obj-C ivar data first
-	if (allInterfaces) {
-		[allInterfaces release];
-		allInterfaces = nil;
-	}
+    self.allInterfaces = nil;
 	
 	// Open socket
 	int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -140,23 +144,21 @@ const NSString *NetworkInformationInterfaceAddressKey = @"address";
 		return;
 	}
 	
-	// Prepare Obj-C ivar here
-	// - Should do this after all error check has been finished to prevent immature setup
-	allInterfaces = [[NSMutableDictionary alloc] init];
-	
+	// Prepare Obj-C dictionary here
+    NSMutableDictionary *interfaces = [NSMutableDictionary dictionary];
+    
 	// Loop through ifc to access struct ifreq
-	// - ifc.ifc_buf now contains multiple struct ifreq, but we don't have any clue of where are those pointers are
+	// - ifc.ifc_buf now contains multiple struct ifreq, but we don't have any clue of where those pointers are
 	// - We have to calculate the next pointer location in order to loop...
 	struct ifreq *p_ifr;
 	for (char *p_index=ifc.ifc_buf; p_index < ifc.ifc_buf+ifc.ifc_len; ) {
 		p_ifr = (struct ifreq *)p_index;
 		
 		if (p_ifr && p_ifr->ifr_addr.sa_family) {
-			NSString *interfaceName = [NSString stringWithCString:p_ifr->ifr_name encoding:NSASCIIStringEncoding];
-			NSNumber *family = [NSNumber numberWithInt:p_ifr->ifr_addr.sa_family];
-			NSString *address = nil;
-			NSMutableDictionary *interfaceDict = nil;
-			NSMutableDictionary *interfaceTypeDetailDict = nil;
+			NSString *interfaceName = @(p_ifr->ifr_name);
+			NSNumber *family = @(p_ifr->ifr_addr.sa_family);
+			NSMutableDictionary *interfaceDict;
+			NSMutableDictionary *interfaceTypeDetailDict;
 			char temp[80];
 			
 			// Switch by sa_family
@@ -165,58 +167,55 @@ const NSString *NetworkInformationInterfaceAddressKey = @"address";
 				case AF_LINK:
 					// MAC address
 					
-					interfaceDict = [allInterfaces objectForKey:interfaceName];
+					interfaceDict = interfaces[interfaceName];
 					if (!interfaceDict) {
 						interfaceDict = [NSMutableDictionary dictionary];
-						[allInterfaces setObject:interfaceDict forKey:interfaceName];
+						interfaces[interfaceName] = interfaceDict;
 					}
 					
-					interfaceTypeDetailDict = [interfaceDict objectForKey:family];
+					interfaceTypeDetailDict = interfaceDict[family];
 					if (!interfaceTypeDetailDict) {
 						interfaceTypeDetailDict = [NSMutableDictionary dictionary];
-						[interfaceDict setObject:interfaceTypeDetailDict forKey:family];
+						interfaceDict[family] = interfaceTypeDetailDict;
 					}
 					
 					struct sockaddr_dl *sdl = (struct sockaddr_dl *) &(p_ifr->ifr_addr);
 					int a,b,c,d,e,f;
 					
-					strcpy(temp, ether_ntoa((const struct ether_addr *)LLADDR(sdl)));
+					strlcpy(temp, ether_ntoa((const struct ether_addr *)LLADDR(sdl)), sizeof(temp));
 					sscanf(temp, "%x:%x:%x:%x:%x:%x", &a, &b, &c, &d, &e, &f);
-					sprintf(temp, "%02X:%02X:%02X:%02X:%02X:%02X",a,b,c,d,e,f);
+					sprintf(temp, "%02X:%02X:%02X:%02X:%02X:%02X", a, b, c, d, e, f);
 					
-					address = [NSString stringWithCString:temp encoding:NSASCIIStringEncoding];
-					[interfaceTypeDetailDict setObject:address forKey:NetworkInformationInterfaceAddressKey];
+					interfaceTypeDetailDict[NetworkInformationInterfaceAddressKey] = @(temp);
 					
 					break;
 					
 				case AF_INET:
 					// IPv4 address
 					
-					interfaceDict = [allInterfaces objectForKey:interfaceName];
+					interfaceDict = interfaces[interfaceName];
 					if (!interfaceDict) {
 						interfaceDict = [NSMutableDictionary dictionary];
-						[allInterfaces setObject:interfaceDict forKey:interfaceName];
+						interfaces[interfaceName] = interfaceDict;
 					}
 					
-					interfaceTypeDetailDict = [interfaceDict objectForKey:family];
+					interfaceTypeDetailDict = interfaceDict[family];
 					if (!interfaceTypeDetailDict) {
 						interfaceTypeDetailDict = [NSMutableDictionary dictionary];
-						[interfaceDict setObject:interfaceTypeDetailDict forKey:family];
+						interfaceDict[family] = interfaceTypeDetailDict;
 					}
 					
 					struct sockaddr_in *sin = (struct sockaddr_in *) &p_ifr->ifr_addr;
 					
-					strcpy(temp, inet_ntoa(sin->sin_addr));
+					strlcpy(temp, inet_ntoa(sin->sin_addr), sizeof(temp));
 					
-					address = [NSString stringWithCString:temp encoding:NSASCIIStringEncoding];
-					[interfaceTypeDetailDict setObject:address forKey:NetworkInformationInterfaceAddressKey];
+					interfaceTypeDetailDict[NetworkInformationInterfaceAddressKey] = @(temp);
 					
 					break;
 					
 				default:
 					// Anything else
 					break;
-					
 			}
 		}
 		
@@ -224,20 +223,20 @@ const NSString *NetworkInformationInterfaceAddressKey = @"address";
 		p_index += sizeof(p_ifr->ifr_name) + MAX(sizeof(p_ifr->ifr_addr), p_ifr->ifr_addr.sa_len);
 	}
 	
-	NSLog(@"allInterfaces = %@", allInterfaces);
+	// Set Obj-C property here
+    self.allInterfaces = interfaces;
+	NSLog(@"allInterfaces = %@", interfaces);
 	
 	// Don't forget to close socket!
 	close(sockfd);
 }
 
 - (NSString *)IPv4AddressForInterfaceName:(NSString *)interfaceName {
-	NSNumber *interfaceType = [NSNumber numberWithInt:NetworkInformationInterfaceTypeIPv4];
-	return [[[allInterfaces objectForKey:interfaceName] objectForKey:interfaceType] objectForKey:NetworkInformationInterfaceAddressKey];
+	return allInterfaces[interfaceName][@(NetworkInformationInterfaceTypeIPv4)][NetworkInformationInterfaceAddressKey];
 }
 
 - (NSString *)MACAddressForInterfaceName:(NSString *)interfaceName {
-	NSNumber *interfaceType = [NSNumber numberWithInt:NetworkInformationInterfaceTypeMAC];
-	return [[[allInterfaces objectForKey:interfaceName] objectForKey:interfaceType] objectForKey:NetworkInformationInterfaceAddressKey];
+	return allInterfaces[interfaceName][@(NetworkInformationInterfaceTypeMAC)][NetworkInformationInterfaceAddressKey];
 }
 
 @end
