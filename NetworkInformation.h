@@ -73,7 +73,7 @@ UIKIT_EXTERN const NSString *NetworkInformationInterfaceAddressKey;
 /*!
  @property		allInterfaceNames
  @abstract		All existing network interface names.
- @discussion	Returns NSArray instance which contains NSString objects that represents all exsiting network interface names.
+ @discussion	Returns NSArray instance which contains NSString objects that represents all existing network interface names.
  refresh is called if the shared instance have not retrieved network information yet.
  */
 @property (nonatomic, readonly) NSArray *allInterfaceNames;
